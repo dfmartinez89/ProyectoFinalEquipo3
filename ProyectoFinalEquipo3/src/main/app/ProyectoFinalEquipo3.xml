@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <http:request-config name="HTTP_Request_Configuration" host="api.currencylayer.com" port="80" doc:name="HTTP Request Configuration"/>
+    <flow name="PublicarMensaje">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/send" doc:name="HTTP"/>
+        <component class="ProyectoFinalEquipo3.Send" doc:name="Java"/>
+        <logger level="INFO" doc:name="Logger"/>
+        <set-payload value="Se ha enviado un mensaje a la cola" doc:name="Set Payload - Log"/>
+    </flow>
+    <flow name="RecibirMensaje">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/get" doc:name="HTTP"/>
+        <component class="ProyectoFinalEquipo3.Recv" doc:name="Java"/>
+        <logger level="INFO" doc:name="Logger"/>
+    </flow>
+    <flow name="Fuente1">
+        <poll doc:name="Poll">
+            <fixed-frequency-scheduler frequency="10" timeUnit="MINUTES"/>
+            <http:request config-ref="HTTP_Request_Configuration" path="/live" method="OPTIONS" doc:name="HTTP">
+                <http:request-builder>
+                    <http:query-param paramName="access_key" value="d358916f4ccf89acdabd1d1dac97a4e3"/>
+                    <http:query-param paramName="currencies" value="EUR"/>
+                    <http:query-param paramName="source" value="USD"/>
+                </http:request-builder>
+            </http:request>
+        </poll>
+        <component class="ProyectoFinalEquipo3.GuardarFuente1" doc:name="Java- Fuente1"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
+        <file:outbound-endpoint path="..\ProyectoFinalEquipo3\factor1\" outputPattern="fuente1-#[function:datestamp].json" responseTimeout="10000" doc:name="Fuente1"/>
+    </flow>
+    <flow name="EndpointsLog">
+        <logger level="INFO" doc:name="Logger"/>
+        <file:outbound-endpoint path="..\ProyectoFinalEquipo3\logs\" outputPattern="log-#[function:datestamp].txt" responseTimeout="10000" doc:name="Log"/>
+    </flow>
+</mule>
